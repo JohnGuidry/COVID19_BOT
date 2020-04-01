@@ -4,7 +4,12 @@
 import requests
 import sys
 import os
+import math
 from bs4 import BeautifulSoup
+
+def round_up(n, decimals=0):
+    multiplier = 10 ** decimals
+    return math.ceil(n * multiplier) / multiplier
 
 page = requests.get('https://www.worldometers.info/coronavirus/country/us/')
 soup = BeautifulSoup(page.content, 'html.parser')
@@ -19,4 +24,8 @@ for row in table.findAll("tr"):
         newDeaths = cells[4].find(text=True)
         activeCases = cells[5].find(text=True)
         source = cells[6].find(text=True)
-        print(state.strip() + ': ' + totalCases)
+        stateStrip = state.strip().replace(':', '')
+        totalCasesNum = int(totalCases.strip().replace(',', '') or 0)
+        totalDeathsNum= int(totalDeaths.strip().replace(',', '') or 0)
+        deathPercent =  round_up((totalDeathsNum / totalCasesNum) * 100, 2)
+        print('+ ' + stateStrip + ' + ' + str(totalCasesNum) + ' + '+ str(totalDeathsNum) + ' + ' + str(deathPercent) +  ' + ')
