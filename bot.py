@@ -6,6 +6,7 @@ import sys
 import discord
 import os
 import math
+import stateDictionary
 
 from dotenv import load_dotenv
 from bs4 import BeautifulSoup
@@ -16,6 +17,14 @@ TOKEN = os.getenv('DISCORD_TOKEN')
 PETEID = os.getenv('PETE_ID')
 SPONGE_MEME = 'https://vignette.wikia.nocookie.net/mlg-parody/images/1/1b/Mocking-spongebob-1556133078.jpg/revision/latest?cb=20190812032513'
 STAT_SITE = 'https://www.worldometers.info/coronavirus/country/us/'
+
+# returns the column with adjusted spacing for table formating 
+def adjustCol(column, maxLength):
+    currLength = len(column)
+    if (currLength < maxLength):
+        adjustment = maxLength
+        column = column.ljust(adjustment)
+    return column
 
 # Rounds up to nearest decimal place given the number of places
 def round_up(n, decimals=0):
@@ -36,33 +45,80 @@ async def covid(ctx, args=''):
 
     # 1000 argument to mock Pete's suggestion
     if args == '1000':
-        await ctx.send('{} mAyBE HaVe iT oNlY ShOw STatEs wItH oVer 1,000 CaSEs'.format(PETEID))
+        await ctx.send('mAyBE HaVe iT oNlY ShOw STatEs wItH oVer 1,000 CaSEs')
         await ctx.send(SPONGE_MEME)
 
-    # No argument outputs all the data
-    if args == '':
-        response = '|State: Total Cases | Total Deaths | Ratio |' + '\n'
-        page = requests.get(STAT_SITE)
-        soup = BeautifulSoup(page.content, 'html.parser')   
-        table = soup.table
-        for row in table.findAll("tr"):
-            cells = row.findAll("td")
-            if len(cells) == 7:
-                state = cells[0].find(text=True)
-                totalCases = cells[1].find(text=True)
-                newCases = cells[2].find(text=True)
-                totalDeaths = cells[3].find(text=True)
+    # No argument outputs all USA State data
+    elif args == '':
+        await ctx.send('Initializing all USA state data...')
 
-                stateStrip = state.strip().replace(':', '')
-                totalCasesNum = int(totalCases.strip().replace(',', '') or 0)
-                totalDeathsNum= int(totalDeaths.strip().replace(',', '') or 0)
-                deathPercent =  round_up((totalDeathsNum / totalCasesNum), 2)
-                response = response + '|' + stateStrip + ': ' + str(totalCasesNum) + ' | '+ str(totalDeathsNum) + ' | ' + str(deathPercent) +  ' | ' +'\n'
-        await ctx.send(response)
-        response = '' 
+    
+    elif int(args) > 0 and args != '':
+        await ctx.send('Initializing USA state data with cases >= ' + args)
 
+    #TODO: This is broken, we never get here due to previous elif error on int(args)
     # We couldn't find the command the user typed
     else: 
-        await ctx.send ('Command does not exist.')
+        await ctx.send('Command does not exist.')
+
+    response = '```| State | Cases  | Deaths | %    |' + '\n'
+    page = requests.get(STAT_SITE)
+    soup = BeautifulSoup(page.content, 'html.parser')   
+    table = soup.table
+    for row in table.findAll("tr"):
+        cells = row.findAll("td")
+        if len(cells) == 7:
+            webState = cells[0].find(text=True)
+            totalCases = cells[1].find(text=True)
+            newCases = cells[2].find(text=True)
+            totalDeaths = cells[3].find(text=True)
+
+            stateStrip = webState.strip().replace(':', '')
+            totalCasesNum = int(totalCases.strip().replace(',', '') or 0)
+
+            # No argument outputs all USA State data
+            if args == '':
+
+                # Don't process US territories and misc.
+                if (stateStrip != 'Wuhan Repatriated' 
+                and stateStrip != 'Diamond Princess Cruise' 
+                and stateStrip != 'United States Virgin Islands' 
+                and stateStrip != 'Northern Mariana Islands' 
+                and stateStrip != 'American Samoa'
+                and stateStrip != 'Guam'):
+
+                    
+                    state =  adjustCol(stateDictionary.us_state_abbrev[stateStrip], 5)
+                    totalCasesNum = int(totalCases.strip().replace(',', '') or 0)
+                    cases = adjustCol(str(totalCasesNum), 6)
+                    totalDeathsNum= int(totalDeaths.strip().replace(',', '') or 0)
+                    deaths = adjustCol(str(totalDeathsNum), 6)
+                    deathPercent =  round_up((totalDeathsNum / totalCasesNum) * 100, 2)
+                    ratio = adjustCol(str(deathPercent), 4)
+                    response = response + '| ' + state + ' | ' + cases + ' | '+ deaths + ' | ' + ratio +  ' |' +'\n'
+
+            # Grab all the isntances over the argument
+            elif int(args) > 0:
+
+                if (stateStrip != 'Wuhan Repatriated' 
+                and stateStrip != 'Diamond Princess Cruise' 
+                and stateStrip != 'United States Virgin Islands' 
+                and stateStrip != 'Northern Mariana Islands' 
+                and stateStrip != 'American Samoa'
+                and stateStrip != 'Guam'
+                and totalCasesNum >= int(args)):
+            
+                    state =  adjustCol(stateDictionary.us_state_abbrev[stateStrip], 5)
+                    totalCasesNum = int(totalCases.strip().replace(',', '') or 0)
+                    cases = adjustCol(str(totalCasesNum), 6)
+                    totalDeathsNum= int(totalDeaths.strip().replace(',', '') or 0)
+                    deaths = adjustCol(str(totalDeathsNum), 6)
+                    deathPercent =  round_up((totalDeathsNum / totalCasesNum) * 100, 2)
+                    ratio = adjustCol(str(deathPercent), 4)
+                    response = response + '| ' + state + ' | ' + cases + ' | '+ deaths + ' | ' + ratio +  ' |' +'\n'
+    
+    #TODO: Fix the Total since we are excluding items
+    await ctx.send(response + '```')
+    response = ''
     
 bot.run(TOKEN)
