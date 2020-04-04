@@ -59,6 +59,10 @@ async def covid(ctx, args=''):
                 deathPercent =  round_up((totalDeathsNum / totalCasesNum), 2)
                 response = response + '|' + stateStrip + ': ' + str(totalCasesNum) + ' | '+ str(totalDeathsNum) + ' | ' + str(deathPercent) +  ' | ' +'\n'
         await ctx.send(response)
-        response = ''  
+        response = '' 
+
+    # We couldn't find the command the user typed
+    else: 
+        await ctx.send ('Command does not exist.')
     
 bot.run(TOKEN)
