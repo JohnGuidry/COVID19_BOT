@@ -6,8 +6,10 @@ import sys
 import discord
 import os
 import math
+
 from dotenv import load_dotenv
 from bs4 import BeautifulSoup
+from discord.ext import commands
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
@@ -20,27 +22,26 @@ def round_up(n, decimals=0):
     multiplier = 10 ** decimals
     return math.ceil(n * multiplier) / multiplier
 
-client = discord.Client()
+# Set bot to go by commands !<command_name>
+bot = commands.Bot(command_prefix='!')
 
 # Verify we have connected
-@client.event
+@bot.event
 async def on_ready():
-    print(f'{client.user} has connected to Discord!')
+    print(f'{bot.user} has connected to Discord!')
 
-@client.event
-async def on_message(message):
-    # Do not want the bot to loop itself
-    if message.author == client.user:
-        return
+# !covid command
+@bot.command()
+async def covid(ctx, args=''):
 
-    # Mocking Pete
-    if message.content == '!covid 1000':
-        await message.channel.send('{} mAyBE HaVe iT oNlY ShOw STatEs wItH oVer 1,000 CaSEs'.format(PETEID))
-        await message.channel.send(SPONGE_MEME)
+    # 1000 argument to mock Pete's suggestion
+    if args == '1000':
+        await ctx.send('{} mAyBE HaVe iT oNlY ShOw STatEs wItH oVer 1,000 CaSEs'.format(PETEID))
+        await ctx.send(SPONGE_MEME)
 
-    # !covid command outputs the State Total Cases, Total Deaths, and ratio of death to cases
-    if message.content == '!covid':
-        response = '| State: Total Cases | Total Deaths | Ratio |' + '\n'
+    # No argument outputs all the data
+    if args == '':
+        response = '|State: Total Cases | Total Deaths | Ratio |' + '\n'
         page = requests.get(STAT_SITE)
         soup = BeautifulSoup(page.content, 'html.parser')   
         table = soup.table
@@ -56,8 +57,8 @@ async def on_message(message):
                 totalCasesNum = int(totalCases.strip().replace(',', '') or 0)
                 totalDeathsNum= int(totalDeaths.strip().replace(',', '') or 0)
                 deathPercent =  round_up((totalDeathsNum / totalCasesNum), 2)
-                response = response + '| ' + stateStrip + ': ' + str(totalCasesNum) + ' | '+ str(totalDeathsNum) + ' | ' + str(deathPercent) +  ' | ' +'\n'
-        await message.channel.send(response)
-        response = ''
-
-client.run(TOKEN)
+                response = response + '|' + stateStrip + ': ' + str(totalCasesNum) + ' | '+ str(totalDeathsNum) + ' | ' + str(deathPercent) +  ' | ' +'\n'
+        await ctx.send(response)
+        response = ''  
+    
+bot.run(TOKEN)
