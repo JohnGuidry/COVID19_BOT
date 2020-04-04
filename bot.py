@@ -12,6 +12,8 @@ from bs4 import BeautifulSoup
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 PETEID = os.getenv('PETE_ID')
+SPONGE_MEME = 'https://vignette.wikia.nocookie.net/mlg-parody/images/1/1b/Mocking-spongebob-1556133078.jpg/revision/latest?cb=20190812032513'
+STAT_SITE = 'https://www.worldometers.info/coronavirus/country/us/'
 
 # Rounds up to nearest decimal place given the number of places
 def round_up(n, decimals=0):
@@ -20,6 +22,7 @@ def round_up(n, decimals=0):
 
 client = discord.Client()
 
+# Verify we have connected
 @client.event
 async def on_ready():
     print(f'{client.user} has connected to Discord!')
@@ -33,12 +36,12 @@ async def on_message(message):
     # Mocking Pete
     if message.content == '!covid 1000':
         await message.channel.send('{} mAyBE HaVe iT oNlY ShOw STatEs wItH oVer 1,000 CaSEs'.format(PETEID))
-        await message.channel.send('https://vignette.wikia.nocookie.net/mlg-parody/images/1/1b/Mocking-spongebob-1556133078.jpg/revision/latest?cb=20190812032513')
+        await message.channel.send(SPONGE_MEME)
 
     # !covid command outputs the State Total Cases, Total Deaths, and ratio of death to cases
     if message.content == '!covid':
         response = '| State: Total Cases | Total Deaths | Ratio |' + '\n'
-        page = requests.get('https://www.worldometers.info/coronavirus/country/us/')
+        page = requests.get(STAT_SITE)
         soup = BeautifulSoup(page.content, 'html.parser')   
         table = soup.table
         for row in table.findAll("tr"):
