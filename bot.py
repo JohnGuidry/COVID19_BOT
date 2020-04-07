@@ -16,7 +16,7 @@ load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 PETEID = os.getenv('PETE_ID')
 SPONGE_MEME = 'https://vignette.wikia.nocookie.net/mlg-parody/images/1/1b/Mocking-spongebob-1556133078.jpg/revision/latest?cb=20190812032513'
-STAT_SITE = 'https://www.worldometers.info/coronavirus/country/us/'
+STAT_SITE = 'https://www.nytimes.com/interactive/2020/us/coronavirus-us-cases.html#states'
 
 # returns the column with adjusted spacing for table formating 
 def adjustCol(column, maxLength):
@@ -65,10 +65,12 @@ async def covid(ctx, args=''):
     page = requests.get(STAT_SITE)
     soup = BeautifulSoup(page.content, 'html.parser')   
     table = soup.table
+    resultCases = 0
+    resultDeaths = 0
     for row in table.findAll("tr"):
         cells = row.findAll("td")
-        if len(cells) == 7:
-            webState = cells[0].find(text=True)
+        if len(cells) == 6:
+            webState = cells[0].find(text=True, recursive=False)
             totalCases = cells[1].find(text=True)
             newCases = cells[2].find(text=True)
             totalDeaths = cells[3].find(text=True)
@@ -90,14 +92,16 @@ async def covid(ctx, args=''):
                     
                     state =  adjustCol(stateDictionary.us_state_abbrev[stateStrip], 5)
                     totalCasesNum = int(totalCases.strip().replace(',', '') or 0)
+                    resultCases = resultCases + totalCasesNum
                     cases = adjustCol(str(totalCasesNum), 6)
                     totalDeathsNum= int(totalDeaths.strip().replace(',', '') or 0)
+                    resultDeaths = resultDeaths + totalDeathsNum
                     deaths = adjustCol(str(totalDeathsNum), 6)
                     deathPercent =  round_up((totalDeathsNum / totalCasesNum) * 100, 2)
                     ratio = adjustCol(str(deathPercent), 4)
                     response = response + '| ' + state + ' | ' + cases + ' | '+ deaths + ' | ' + ratio +  ' |' +'\n'
 
-            # Grab all the isntances over the argument
+            # Grab all the instances over the argument
             elif int(args) > 0:
 
                 if (stateStrip != 'Wuhan Repatriated' 
@@ -110,14 +114,20 @@ async def covid(ctx, args=''):
             
                     state =  adjustCol(stateDictionary.us_state_abbrev[stateStrip], 5)
                     totalCasesNum = int(totalCases.strip().replace(',', '') or 0)
+                    resultCases = resultCases + totalCasesNum
                     cases = adjustCol(str(totalCasesNum), 6)
                     totalDeathsNum= int(totalDeaths.strip().replace(',', '') or 0)
+                    resultDeaths = resultDeaths + totalDeathsNum
                     deaths = adjustCol(str(totalDeathsNum), 6)
                     deathPercent =  round_up((totalDeathsNum / totalCasesNum) * 100, 2)
                     ratio = adjustCol(str(deathPercent), 4)
                     response = response + '| ' + state + ' | ' + cases + ' | '+ deaths + ' | ' + ratio +  ' |' +'\n'
     
-    #TODO: Fix the Total since we are excluding items
+    deathPercentTotal =  round_up((resultDeaths / resultCases) * 100, 2)
+    printResultCases = adjustCol(str(resultCases), 6)
+    printResultDeaths = adjustCol(str(resultDeaths), 6)
+    printRatio = adjustCol(str(deathPercentTotal), 4)
+    response = response + '| ' + 'Total' + ' | ' + printResultCases + ' | '+ printResultDeaths + ' | ' + printRatio +  ' |' +'\n'
     await ctx.send(response + '```')
     response = ''
     
